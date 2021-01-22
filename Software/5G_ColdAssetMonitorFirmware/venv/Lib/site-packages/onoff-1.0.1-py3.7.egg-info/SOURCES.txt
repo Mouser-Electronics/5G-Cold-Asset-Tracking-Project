@@ -1,0 +1,15 @@
+.gitignore
+INSTALL.txt
+LICENSE
+README.rst
+onoff.py
+setup.cfg
+setup.py
+docs/.directory
+docs/Makefile
+docs/source/conf.py
+docs/source/index.rst
+onoff.egg-info/PKG-INFO
+onoff.egg-info/SOURCES.txt
+onoff.egg-info/dependency_links.txt
+onoff.egg-info/top_level.txt

@@ -1,0 +1,16 @@
+Metadata-Version: 1.2
+Name: mqttclient
+Version: 0.0.2
+Summary: MQTT Client for Python
+Home-page: https://github.com/Lucaszw/mqttclient-python
+License: BSD-2-Clause
+Author: Sci-Bots
+Author-email: lucas@sci-bots.com
+Requires-Python: >=3.6
+Requires-Dist: paho-mqtt
+Requires-Dist: wheezy.routing
+Requires-Dist: onoff
+
+# @mqttclient/python
+Python MqttClient
+

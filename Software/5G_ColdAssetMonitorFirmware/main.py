@@ -19,21 +19,39 @@
 # SOFTWARE.
 
 import time
-from machine import UART
-from hdc1080 import HDC1080
+
+import network
 from machine import I2C
+from machine import UART
+
+from hdc1080 import HDC1080
+
+from umqtt.simple import MQTTClient
 
 # Constants
 GNGGA_MARK = "$GNGGA"
 GNGSA_MARK = "$GNGSA"
 
+SERVER = "mqtt.mediumone.com"
+TOPIC = "cold_storage_asset_tracking"
+CLIENT_ID = "clientID"  # Should be unique for each device connected.
+
+
+def sub_cb(topic, msg):
+    """
+    Callback executed when messages from subscriptions are received. Prints
+    the topic and the message.
+    :param topic: Topic of the message.
+    :param msg: Received message.
+    """
+    print("- Message received!")
+    print("   * %s: %s" % (topic.decode("utf-8"), msg.decode("utf-8")))
+
 
 def extract_gps(serial_data):
     """
     Extracts the GPS data from the provided text.
-
     :param serial_data: Text to extract the GPS data from.
-
     :return: GPS data or and empty string if data could not be found.
     """
 
@@ -54,9 +72,7 @@ def extract_latitude(input_string):
     """
     Extracts the latitude from the provided text, value is all in degrees and
     negative if South of Equator.
-
     :param input_string: Text to extract the latitude from.
-
     :return: Latitude
     """
 
@@ -88,9 +104,7 @@ def extract_longitude(input_string):
     """
     Extracts the longitude from the provided text, value is all in degrees and
     negative if West of London.
-
     :param input_string: Text to extract the longitude from.
-
     :return: Longitude
     """
 
@@ -149,6 +163,7 @@ def read_gps_sample():
             else:
                 print("[ERROR]")
                 print("   * Bad GPS signal. Retrying...")
+                return 9999, 9999
 
     except Exception as E:
         print("[ERROR]")
@@ -161,9 +176,34 @@ print(" +---------------------------------------+\n")
 
 # Create a UART instance (this will talk to the GPS module).
 u = UART(1, 9600)
+
+# Create a HDC1080 Temp/Humidity Sensor instance
 sensor = HDC1080(I2C(1))
 
-# Start reading GPS samples every 30 seconds.
+
+# Connect to the cellular network
+conn = network.Cellular()
+
+print("- Waiting for the module to be connected to the cellular network... ",
+      end="")
+while not conn.isconnected():
+    time.sleep(5)
+print("[OK]")
+
+
+# Connect to the MQTT server.
+client = MQTTClient(CLIENT_ID, SERVER)
+client.set_callback(sub_cb)
+print("- Connecting to '%s'... " % SERVER, end="")
+client.connect()
+print("[OK]")
+# Subscribe to topic.
+print("- Subscribing to topic '%s'... " % TOPIC, end="")
+client.subscribe(TOPIC)
+print("[OK]")
+
+
+# Start reading sensor and GPS samples every 30 seconds.
 while True:
     latitude_dec, longitude_dec = read_gps_sample()
     temp_celsius = sensor.read_temperature(True)
@@ -175,4 +215,19 @@ while True:
     print("- Latitude: %s" % latitude_dec)
     print("- Longitude: %s" % longitude_dec)
     print("")
+
+    MESSAGE = """{"event_data":{"temperature":"""
+    MESSAGE += temp_celsius
+    MESSAGE += ""","humidity":"""
+    MESSAGE += humidity_hr
+    MESSAGE += ""","lat":"""
+    MESSAGE += latitude_dec
+    MESSAGE += ""","lon":"""
+    MESSAGE += longitude_dec
+    MESSAGE += """}}"""
+
+    print("- Publishing message... ", end="")
+    client.publish(TOPIC, MESSAGE)
+    print("[OK]")
+
     time.sleep(30)
