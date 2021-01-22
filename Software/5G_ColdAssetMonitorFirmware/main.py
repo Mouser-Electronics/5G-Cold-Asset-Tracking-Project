@@ -189,9 +189,9 @@ print("- Waiting for the module to be connected to the cellular network... ",
 while not conn.isconnected():
     time.sleep(5)
 print("[OK]")
+print("This devices IP address is: ", conn.ifconfig()[0])
 
-
-# Connect to the MQTT server.
+# Connect to the MQTT server
 client = MQTTClient(CLIENT_ID, SERVER)
 client.set_callback(sub_cb)
 print("- Connecting to '%s'... " % SERVER, end="")
