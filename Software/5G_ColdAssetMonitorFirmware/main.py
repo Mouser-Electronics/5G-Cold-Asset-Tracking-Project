@@ -25,7 +25,6 @@ from machine import I2C
 from machine import UART
 
 from hdc1080 import HDC1080
-
 from umqtt.simple import MQTTClient
 
 # Constants
@@ -33,8 +32,11 @@ GNGGA_MARK = "$GNGGA"
 GNGSA_MARK = "$GNGSA"
 
 SERVER = "mqtt.mediumone.com"
-TOPIC = "cold_storage_asset_tracking"
-CLIENT_ID = "clientID"  # Should be unique for each device connected.
+PUB_TOPIC = "0/xxx/yyy/cold_asset_tracker"
+CLIENT_ID = "zzz"  # Should be unique for each device connected.
+
+client = MQTTClient('cold_asset_tracker', SERVER, port=61617, user='aaa',
+                    password='bbb', keepalive=3000, ssl=False)
 
 
 def sub_cb(topic, msg):
@@ -140,7 +142,7 @@ def read_gps_sample():
     try:
         # Attempt to read GPS data up to 3 times.
         for i in range(3):
-            print("- Reading GPS data... ",  end="")
+            print("Reading GPS data... ", end="")
             # Configure the UART to the GPS required parameters.
             u.init(9600, bits=8, parity=None, stop=1)
             time.sleep(1)
@@ -157,17 +159,22 @@ def read_gps_sample():
             lat = extract_latitude(extract_gps(gps_data))
             lon = extract_longitude(extract_gps(gps_data))
             # Print location.
-            if lon != 9999 and lat != 9999:
-                print("[OK]")
-                return lat, lon
-            else:
-                print("[ERROR]")
-                print("   * Bad GPS signal. Retrying...")
-                return 9999, 9999
+            print(" [OK]")
+            return lat, lon
 
     except Exception as E:
         print("[ERROR]")
-        print("   * There was a problem getting GPS data: %s", str(E))
+        print("###ERROR### There was a problem getting GPS data: %s", str(E))
+
+
+def register_device():
+    try:
+        print('Attempting to connect to MQTT server')
+        client.connect()
+        connected = True
+    except:
+        print('MQTT Connection FAILED')
+        register_device()
 
 
 print(" +---------------------------------------+")
@@ -180,28 +187,37 @@ u = UART(1, 9600)
 # Create a HDC1080 Temp/Humidity Sensor instance
 sensor = HDC1080(I2C(1))
 
-
 # Connect to the cellular network
 conn = network.Cellular()
-
-print("- Waiting for the module to be connected to the cellular network... ",
+conn.active(True)
+print("Waiting for the module to be connected to the cellular network... ",
       end="")
 while not conn.isconnected():
     time.sleep(5)
 print("[OK]")
-print("This devices IP address is: ", conn.ifconfig()[0])
+print("Here is a summary of cellular network connection:")
+print("- IP address:", conn.ifconfig()[0])
+print("- SIM card number:", conn.config('iccid'))
+print("- International Mobile Equipment Identity:", conn.config('imei'))
+print("- Network operator:", conn.config('operator'))
 
-# Connect to the MQTT server
-client = MQTTClient(CLIENT_ID, SERVER)
-client.set_callback(sub_cb)
-print("- Connecting to '%s'... " % SERVER, end="")
-client.connect()
+connected = False
+while not connected:
+    # client.disconnect()
+    try:
+        print('Attempting to connect to MQTT server ...', end="")
+        client.connect()
+        connected = True
+    except:
+        print('MQTT Connection FAILED')
+        register_device()
+        continue
+
 print("[OK]")
 # Subscribe to topic.
-print("- Subscribing to topic '%s'... " % TOPIC, end="")
-client.subscribe(TOPIC)
+client.set_callback(sub_cb)
+print("Publishing to topic '%s'... " % PUB_TOPIC, end="")
 print("[OK]")
-
 
 # Start reading sensor and GPS samples every 30 seconds.
 while True:
@@ -210,24 +226,19 @@ while True:
     humidity_hr = sensor.read_humidity()
 
     # Print results:
-    print("- Temperature: %s C" % round(temp_celsius, 2))
-    print("- Humidity: %s %%" % round(humidity_hr, 2))
     print("- Latitude: %s" % latitude_dec)
     print("- Longitude: %s" % longitude_dec)
+    print("- Temperature: %s C" % round(temp_celsius, 2))
+    print("- Humidity: %s %%" % round(humidity_hr, 2))
+
+
+    MESSAGE = """{"event_data":{"temperature":""" + str(temp_celsius) + ""","humidity":""" + str(humidity_hr) + ""","lat":"""\
+              + str(latitude_dec) + ""","lon":""" + str(longitude_dec) + """}}"""
+
+    if latitude_dec != 9999 and longitude_dec != 9999:
+        print("Publishing message... ", end="")
+        client.publish(PUB_TOPIC, MESSAGE)
+        print("[OK]")
+
     print("")
-
-    MESSAGE = """{"event_data":{"temperature":"""
-    MESSAGE += temp_celsius
-    MESSAGE += ""","humidity":"""
-    MESSAGE += humidity_hr
-    MESSAGE += ""","lat":"""
-    MESSAGE += latitude_dec
-    MESSAGE += ""","lon":"""
-    MESSAGE += longitude_dec
-    MESSAGE += """}}"""
-
-    print("- Publishing message... ", end="")
-    client.publish(TOPIC, MESSAGE)
-    print("[OK]")
-
     time.sleep(30)
