@@ -1,4 +1,15 @@
-# Copyright (c) 2019, Digi International, Inc.
+# Project: 5G Cold Asset Tracker
+# Date Modified: 23 Jan 2021
+# Version: 0.0.1
+#
+# Description: Proof-of-concept for a device that leverages
+# 5G cellular technology to monitor and report the temperature,
+# humidity, and location (lat/lon) of assets requiring to be
+# kept at low temperatures.
+#
+# Contributors: Mouser, Digi, Medium One, Green Shoe Garage
+#
+# Based on code provided by Digi International Inc. Copyright (c) 2019.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -34,15 +45,15 @@ GNGSA_MARK = "$GNGSA"
 SERVER = "mqtt.mediumone.com"
 PORT = 61618
 
-PUB_TOPIC = "0/<MQTT Project ID>/<MQTT User ID>/cold_asset_tracker"
-CLIENT_ID = "<MQTT Project ID>+<MQTT User ID>"  # Should be unique for each device connected.
-DEVICE_ID = "cold_asset_tracker"
+PUB_TOPIC = "0/<MQTT Project ID>/<MQTT User ID>/cold_asset_tracker_0001"
+CLIENT_ID = "<MQTT Project ID>+<MQTT User ID>+<_0001>"  # Should be unique for each device connected.
 USER = "<MQTT Project ID>/<MQTT User ID>"
 PASS = "<API Key>/<MQTT User Password>"
 
 connected = False
+DELAY_AMT = 30
 
-client = MQTTClient(DEVICE_ID, SERVER, port=PORT, user=USER, password=PASS, keepalive=3000, ssl=True)
+client = MQTTClient(CLIENT_ID, SERVER, port=PORT, user=USER, password=PASS, keepalive=3000, ssl=True)
 
 
 def sub_cb(topic, msg):
@@ -174,16 +185,23 @@ def read_gps_sample():
         machine.reset()
 
 
-def register_device():
+def connect_device():
+    """
+    Attempts to connect device to Medium One MQTT server
+    """
     try:
-        print('Attempting to connect to MQTT server')
+        print("Attempting to connect to MQTT server")
         client.connect()
         global connected
         connected = True
-    except:
-        print('MQTT Connection FAILED')
-        register_device()
+    except Exception as E:
+        print("MQTT Connection FAILED: %s", str(E))
+        connect_device()
 
+
+"""
+    Start of the initialization code
+"""
 
 print(" +---------------------------------------+")
 print(" | 5G Cold Asset Tracking and Monitoring |")
@@ -209,25 +227,30 @@ print("- SIM card number:", conn.config('iccid'))
 print("- International Mobile Equipment Identity:", conn.config('imei'))
 print("- Network operator:", conn.config('operator'))
 
+# Connect to Medium One MQTT Server
 while not connected:
     try:
         print('Attempting to connect to MQTT server ...', end="")
         client.connect()
         connected = True
-    except:
-        print('MQTT Connection FAILED')
-        register_device()
+    except Exception as Ex:
+        print("MQTT Connection FAILED: %s", str(Ex))
+        connect_device()
         continue
-
 print("[OK]")
 
-# Subscribe to topic.
+# Set up callback and MO topic to publish to
 client.set_callback(sub_cb)
 print("Publishing to topic '%s'... " % PUB_TOPIC, end="")
 print("[OK]")
 
-# Start reading sensor and GPS samples every 30 seconds.
+
+"""
+    Begin the main loop
+"""
+
 while True:
+    # Start reading sensor and GPS samples every 30 seconds.
     latitude_dec, longitude_dec = read_gps_sample()
     temp_celsius = sensor.read_temperature(True)
     humidity_hr = sensor.read_humidity()
@@ -238,13 +261,16 @@ while True:
     print("- Temperature: %s C" % round(temp_celsius, 2))
     print("- Humidity: %s %%" % round(humidity_hr, 2))
 
+    # Construct the MQTT message
     MESSAGE = """{"event_data":{"temperature":""" + str(temp_celsius) + ""","humidity":""" + \
               str(humidity_hr) + ""","lat":""" + str(latitude_dec) + ""","lon":""" + str(longitude_dec) + """}}"""
 
+    # If the lat and lon are valid, transmit message to Medium One topic
     if latitude_dec != 9999 and longitude_dec != 9999:
         print("Publishing message... ", end="")
         client.publish(PUB_TOPIC, MESSAGE)
         print("[OK]")
 
+    # Wait X seconds and then repeat, X is define by variable DELAY_AMT
     print("")
-    time.sleep(30)
+    time.sleep(DELAY_AMT)
