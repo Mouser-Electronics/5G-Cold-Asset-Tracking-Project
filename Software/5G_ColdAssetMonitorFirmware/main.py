@@ -264,7 +264,10 @@ while True:
 
     # Construct the MQTT message
     MESSAGE = """{"event_data":{"temperature":""" + str(temp_celsius) + ""","humidity":""" + \
-              str(humidity_hr) + ""","lat":""" + str(latitude_dec) + ""","lon":""" + str(longitude_dec) + """}}"""
+              str(humidity_hr) + ""","loc":""" + "\"" + str(latitude_dec) + " " + str(longitude_dec) \
+              + "\"" + ""","lat":""" + str(latitude_dec) + ""","lon":""" + str(longitude_dec) + """}}"""
+
+    # print(MESSAGE)
 
     # If the lat and lon are valid, transmit message to Medium One topic
     if latitude_dec != 9999 and longitude_dec != 9999:
