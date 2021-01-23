@@ -44,9 +44,10 @@ GNGGA_MARK = "$GNGGA"
 GNGSA_MARK = "$GNGSA"
 SERVER = "mqtt.mediumone.com"
 PORT = 61618
+DEVICE_ID = "cold_asset_tracker_0001"
 
-PUB_TOPIC = "0/<MQTT Project ID>/<MQTT User ID>/cold_asset_tracker_0001"
-CLIENT_ID = "<MQTT Project ID>+<MQTT User ID>+<_0001>"  # Should be unique for each device connected.
+PUB_TOPIC = "0/<MQTT Project ID>/<MQTT User ID>/<DEVICE_ID>"
+CLIENT_ID = "<MQTT Project ID>+<MQTT User ID>+<DEVICE_ID>"  # Should be unique for each device connected.
 USER = "<MQTT Project ID>/<MQTT User ID>"
 PASS = "<API Key>/<MQTT User Password>"
 
