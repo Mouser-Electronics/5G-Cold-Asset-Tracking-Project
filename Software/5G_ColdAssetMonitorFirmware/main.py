@@ -19,6 +19,7 @@
 # SOFTWARE.
 
 import time
+import machine
 
 import network
 from machine import I2C
@@ -30,13 +31,18 @@ from umqtt.simple import MQTTClient
 # Constants
 GNGGA_MARK = "$GNGGA"
 GNGSA_MARK = "$GNGSA"
-
 SERVER = "mqtt.mediumone.com"
-PUB_TOPIC = "0/xxx/yyy/cold_asset_tracker"
-CLIENT_ID = "zzz"  # Should be unique for each device connected.
+PORT = 61618
 
-client = MQTTClient('cold_asset_tracker', SERVER, port=61617, user='aaa',
-                    password='bbb', keepalive=3000, ssl=False)
+PUB_TOPIC = "0/<MQTT Project ID>/<MQTT User ID>/cold_asset_tracker"
+CLIENT_ID = "<MQTT Project ID>+<MQTT User ID>"  # Should be unique for each device connected.
+DEVICE_ID = "cold_asset_tracker"
+USER = "<MQTT Project ID>/<MQTT User ID>"
+PASS = "<API Key>/<MQTT User Password>"
+
+connected = False
+
+client = MQTTClient(DEVICE_ID, SERVER, port=PORT, user=USER, password=PASS, keepalive=3000, ssl=True)
 
 
 def sub_cb(topic, msg):
@@ -165,12 +171,14 @@ def read_gps_sample():
     except Exception as E:
         print("[ERROR]")
         print("###ERROR### There was a problem getting GPS data: %s", str(E))
+        machine.reset()
 
 
 def register_device():
     try:
         print('Attempting to connect to MQTT server')
         client.connect()
+        global connected
         connected = True
     except:
         print('MQTT Connection FAILED')
@@ -201,9 +209,7 @@ print("- SIM card number:", conn.config('iccid'))
 print("- International Mobile Equipment Identity:", conn.config('imei'))
 print("- Network operator:", conn.config('operator'))
 
-connected = False
 while not connected:
-    # client.disconnect()
     try:
         print('Attempting to connect to MQTT server ...', end="")
         client.connect()
@@ -214,6 +220,7 @@ while not connected:
         continue
 
 print("[OK]")
+
 # Subscribe to topic.
 client.set_callback(sub_cb)
 print("Publishing to topic '%s'... " % PUB_TOPIC, end="")
@@ -231,9 +238,8 @@ while True:
     print("- Temperature: %s C" % round(temp_celsius, 2))
     print("- Humidity: %s %%" % round(humidity_hr, 2))
 
-
-    MESSAGE = """{"event_data":{"temperature":""" + str(temp_celsius) + ""","humidity":""" + str(humidity_hr) + ""","lat":"""\
-              + str(latitude_dec) + ""","lon":""" + str(longitude_dec) + """}}"""
+    MESSAGE = """{"event_data":{"temperature":""" + str(temp_celsius) + ""","humidity":""" + \
+              str(humidity_hr) + ""","lat":""" + str(latitude_dec) + ""","lon":""" + str(longitude_dec) + """}}"""
 
     if latitude_dec != 9999 and longitude_dec != 9999:
         print("Publishing message... ", end="")
