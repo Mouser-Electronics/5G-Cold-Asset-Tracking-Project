@@ -46,10 +46,15 @@ SERVER = "mqtt.mediumone.com"
 PORT = 61618
 DEVICE_ID = "cold_asset_tracker_0001"
 
-PUB_TOPIC = "0/<MQTT Project ID>/<MQTT User ID>/<DEVICE_ID>"
-CLIENT_ID = "<MQTT Project ID>+<MQTT User ID>+<DEVICE_ID>"  # Should be unique for each device connected.
-USER = "<MQTT Project ID>/<MQTT User ID>"
-PASS = "<API Key>/<MQTT User Password>"
+PUB_TOPIC = "0/TvB86fzbjjc/wJuESs_sJoE/cold_asset_tracker_0001"
+CLIENT_ID = "TvB86fzbjjcwJuESs_sJoE_0001"  # Should be unique for each device connected.
+USER = "TvB86fzbjjc/wJuESs_sJoE"
+PASS = "Q66GG5JOMEARGWABXTTAHIZQMM3WGMJSG44GMYRQGQYTAMBQ/Mediumone123!@#"
+
+# PUB_TOPIC = "0/<MQTT Project ID>/<MQTT User ID>/<DEVICE_ID>"
+# CLIENT_ID = "<MQTT Project ID>+<MQTT User ID>+<DEVICE_ID>"  # Should be unique for each device connected.
+# USER = "<MQTT Project ID>/<MQTT User ID>"
+# PASS = "<API Key>/<MQTT User Password>"
 
 connected = False
 DELAY_AMT = 30
