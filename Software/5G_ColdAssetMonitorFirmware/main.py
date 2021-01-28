@@ -31,11 +31,10 @@
 
 import time
 import machine
-
+import ujson
 import network
 from machine import I2C
 from machine import UART
-
 from hdc1080 import HDC1080
 from umqtt.simple import MQTTClient
 
@@ -46,10 +45,6 @@ SERVER = "mqtt.mediumone.com"
 PORT = 61618
 DEVICE_ID = "cold_asset_tracker_0001"
 
-PUB_TOPIC = "0/TvB86fzbjjc/wJuESs_sJoE/cold_asset_tracker_0001"
-CLIENT_ID = "TvB86fzbjjcwJuESs_sJoE_0001"  # Should be unique for each device connected.
-USER = "TvB86fzbjjc/wJuESs_sJoE"
-PASS = "Q66GG5JOMEARGWABXTTAHIZQMM3WGMJSG44GMYRQGQYTAMBQ/Mediumone123!@#"
 
 # PUB_TOPIC = "0/<MQTT Project ID>/<MQTT User ID>/<DEVICE_ID>"
 # CLIENT_ID = "<MQTT Project ID>+<MQTT User ID>+<DEVICE_ID>"  # Should be unique for each device connected.
@@ -58,8 +53,6 @@ PASS = "Q66GG5JOMEARGWABXTTAHIZQMM3WGMJSG44GMYRQGQYTAMBQ/Mediumone123!@#"
 
 connected = False
 DELAY_AMT = 30
-
-client = MQTTClient(CLIENT_ID, SERVER, port=PORT, user=USER, password=PASS, keepalive=3000, ssl=True)
 
 
 def sub_cb(topic, msg):
@@ -218,6 +211,23 @@ u = UART(1, 9600)
 
 # Create a HDC1080 Temp/Humidity Sensor instance
 sensor = HDC1080(I2C(1))
+
+# Read the secrets.json file for connection info
+with open('secrets.json', 'r') as fp:
+    try:
+        secrets = ujson.loads(fp.read())
+    except Exception as err:
+        print("[ERROR]")
+        print("###ERROR### There was a problem reading filesystem", str(err))
+
+PUB_TOPIC = secrets['mqtt']['topic']
+CLIENT_ID = secrets['mqtt']['client']  # Should be unique for each device connected.
+USER = secrets['mqtt']['user']
+PASS = secrets['mqtt']['pass']
+
+fp.close()
+
+client = MQTTClient(CLIENT_ID, SERVER, port=PORT, user=USER, password=PASS, keepalive=3000, ssl=True)
 
 # Connect to the cellular network
 conn = network.Cellular()
