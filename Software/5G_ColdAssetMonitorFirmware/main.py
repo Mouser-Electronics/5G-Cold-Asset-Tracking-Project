@@ -1,4 +1,4 @@
-# Project: 5G Cold Asset Tracker
+# Project: 5G Cold Asset Tracker (5G-CAT)
 # Date Modified: 23 Jan 2021
 # Version: 0.0.1
 #
